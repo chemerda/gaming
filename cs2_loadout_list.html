@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS2 My Loadouts</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c10;--surface:#0f1318;--surface2:#161b24;
+  --border:#1e2836;--border2:#243040;
+  --accent:#f0a500;--accent2:#e05c00;
+  --blue:#3b9eff;--green:#2ecc71;--purple:#9b59b6;
+  --red:#e74c3c;--cyan:#00d4ff;
+  --text:#c8d8e8;--text-dim:#6a8098;--text-bright:#eaf2ff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(59,158,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,158,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+.container{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 24px 80px}
+
+/* Header */
+header{padding:32px 24px 28px;text-align:center;position:relative;border-bottom:1px solid var(--border);margin-bottom:0}
+header::after{content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:200px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.logo-line{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:10px}
+.cs-badge{background:var(--accent);color:#000;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:3px;padding:3px 10px;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+h1{font-family:'Rajdhani',sans-serif;font-size:clamp(24px,4vw,40px);font-weight:700;color:var(--text-bright);letter-spacing:2px;line-height:1}
+h1 span{color:var(--accent)}
+.subtitle{font-family:'Share Tech Mono',monospace;color:var(--text-dim);font-size:12px;letter-spacing:2px;margin-top:8px}
+
+/* Toolbar */
+.toolbar-row{display:flex;gap:8px;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid var(--border);margin-bottom:28px;align-items:center}
+.action-btn{font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 16px;background:transparent;border:1px solid;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .2s;letter-spacing:1px;text-decoration:none}
+.btn-accent{border-color:var(--accent);color:var(--accent)}
+.btn-accent:hover{background:rgba(240,165,0,.1)}
+.btn-dim{border-color:var(--border2);color:var(--text-dim)}
+.btn-dim:hover{border-color:var(--text-dim);color:var(--text)}
+.search-input{background:var(--surface);border:1px solid var(--border2);color:var(--text-bright);font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 14px;outline:none;transition:border-color .2s;letter-spacing:.5px;flex:1;min-width:180px}
+.search-input:focus{border-color:var(--accent)}
+.search-input::placeholder{color:var(--text-dim)}
+.count-label{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:.5px;margin-left:auto;white-space:nowrap}
+
+/* Empty state */
+.empty-state{text-align:center;padding:80px 20px}
+.empty-icon{font-size:48px;margin-bottom:16px;opacity:.3}
+.empty-title{font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-bright);margin-bottom:8px}
+.empty-text{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:.5px;margin-bottom:24px}
+
+/* Loadout card */
+.lo-card{background:var(--surface);border:1px solid var(--border);margin-bottom:14px;transition:border-color .2s}
+.lo-card:hover{border-color:var(--border2)}
+.lo-card-accent{height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent),transparent)}
+.lo-card-head{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;border-bottom:1px solid var(--border)}
+.lo-name{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-bright);flex:1;transition:color .2s}
+.lo-card-head:hover .lo-name{color:var(--accent)}
+.lo-badge{font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 8px;border:1px solid var(--accent);color:var(--accent);letter-spacing:1px;white-space:nowrap}
+.lo-date{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:.5px;white-space:nowrap}
+.lo-actions{display:flex;gap:6px;margin-left:8px}
+.lo-btn{font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 10px;border:1px solid var(--border2);background:transparent;color:var(--text-dim);cursor:pointer;letter-spacing:.8px;text-decoration:none;transition:all .2s;display:inline-flex;align-items:center;gap:4px;clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%)}
+.lo-btn:hover{border-color:var(--accent);color:var(--accent)}
+.lo-btn.edit{border-color:var(--blue);color:var(--blue)}
+.lo-btn.edit:hover{background:rgba(59,158,255,.08)}
+.lo-btn.del:hover{border-color:var(--red);color:var(--red)}
+
+/* Skin strip */
+.skin-strip{display:flex;gap:6px;padding:12px 18px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.strip-item{flex-shrink:0;width:90px;text-align:center}
+.strip-img{width:90px;height:68px;background:linear-gradient(135deg,var(--surface2),#0d1520);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.strip-img img{max-width:80px;max-height:60px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+.strip-wn{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text-dim);letter-spacing:.5px;margin-top:4px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.strip-sk{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:var(--blue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Delete confirm row */
+.del-row{display:none;padding:10px 18px;background:rgba(231,76,60,.06);border-top:1px solid rgba(231,76,60,.2);align-items:center;gap:12px}
+.del-row.active{display:flex}
+.del-msg{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);flex:1;letter-spacing:.5px}
+.del-yes{font-family:'Share Tech Mono',monospace;font-size:10px;padding:5px 12px;border:1px solid var(--red);color:var(--red);background:transparent;cursor:pointer;letter-spacing:1px;transition:background .2s}
+.del-yes:hover{background:rgba(231,76,60,.15)}
+.del-no{font-family:'Share Tech Mono',monospace;font-size:10px;padding:5px 12px;border:1px solid var(--border2);color:var(--text-dim);background:transparent;cursor:pointer;letter-spacing:1px;transition:all .2s}
+.del-no:hover{border-color:var(--text-dim);color:var(--text)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--cyan);padding:10px 18px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-bright);z-index:9999;transform:translateY(60px);opacity:0;transition:all .3s;letter-spacing:.5px}
+.toast.show{transform:translateY(0);opacity:1}
+
+@media(max-width:600px){
+  .lo-card-head{flex-wrap:wrap}
+  .count-label{display:none}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo-line">
+      <span class="cs-badge">CS2</span>
+      <span class="cs-badge" style="background:transparent;color:var(--accent);border:1px solid var(--accent)">SKIN INDEX</span>
+    </div>
+    <h1>MY <span>LOADOUTS</span></h1>
+    <div class="subtitle">// SAVED WEAPON SKIN CONFIGURATIONS</div>
+  </header>
+
+  <div class="toolbar-row">
+    <a href="cs2_loadout_builder.html" class="action-btn btn-accent">+ NEW LOADOUT</a>
+    <input type="text" class="search-input" id="searchInput" placeholder="SEARCH LOADOUTS…" oninput="renderList()">
+    <span class="count-label" id="countLabel"></span>
+    <a href="cs2_master_index.html" class="action-btn btn-dim">← BACK TO INDEX</a>
+  </div>
+
+  <div id="listContainer"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const ALL_SLOTS = [
+  {id:'glock18',name:'Glock-18'},{id:'p2000',name:'P2000'},{id:'usps',name:'USP-S'},
+  {id:'p250',name:'P250'},{id:'five_seven',name:'Five-SeveN'},{id:'tec9',name:'Tec-9'},
+  {id:'cz75',name:'CZ75-Auto'},{id:'deagle',name:'Desert Eagle'},{id:'r8',name:'R8 Revolver'},
+  {id:'dual',name:'Dual Berettas'},
+  {id:'mac10',name:'MAC-10'},{id:'mp9',name:'MP9'},{id:'mp5sd',name:'MP5-SD'},
+  {id:'mp7',name:'MP7'},{id:'ump45',name:'UMP-45'},{id:'p90',name:'P90'},{id:'pp_bizon',name:'PP-Bizon'},
+  {id:'ak47',name:'AK-47'},{id:'m4a4',name:'M4A4'},{id:'m4a1s',name:'M4A1-S'},
+  {id:'famas',name:'FAMAS'},{id:'galil',name:'Galil AR'},{id:'sg553',name:'SG 553'},{id:'aug',name:'AUG'},
+  {id:'awp',name:'AWP'},{id:'ssg08',name:'SSG 08'},{id:'g3sg1',name:'G3SG1'},{id:'scar20',name:'SCAR-20'},
+  {id:'nova',name:'Nova'},{id:'xm1014',name:'XM1014'},{id:'mag7',name:'MAG-7'},
+  {id:'sawedoff',name:'Sawed-Off'},{id:'negev',name:'Negev'},{id:'m249',name:'M249'},
+  {id:'knife',name:'Knife'},{id:'gloves',name:'Gloves'},
+];
+
+function getLoadouts() {
+  try { return JSON.parse(localStorage.getItem('cs2_loadouts') || '[]'); } catch(e) { return []; }
+}
+function setLoadouts(arr) {
+  try { localStorage.setItem('cs2_loadouts', JSON.stringify(arr)); } catch(e) {}
+}
+
+function fmtDate(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleDateString(undefined, {year:'numeric',month:'short',day:'numeric'});
+}
+
+function renderList() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const all = getLoadouts();
+  const fil = q ? all.filter(l => l.name.toLowerCase().includes(q)) : all;
+  const wrap = document.getElementById('listContainer');
+  const cl = document.getElementById('countLabel');
+
+  if (!all.length) {
+    cl.textContent = '';
+    wrap.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🎯</div>
+      <div class="empty-title">NO LOADOUTS YET</div>
+      <div class="empty-text">// CREATE YOUR FIRST LOADOUT TO GET STARTED</div>
+      <a href="cs2_loadout_builder.html" class="action-btn btn-accent" style="display:inline-flex;margin:0 auto">+ CREATE FIRST LOADOUT</a>
+    </div>`;
+    return;
+  }
+
+  cl.textContent = fil.length === all.length
+    ? `${all.length} LOADOUT${all.length !== 1 ? 'S' : ''}`
+    : `${fil.length} OF ${all.length}`;
+
+  if (!fil.length) {
+    wrap.innerHTML = `<div class="empty-state" style="padding:40px 20px">
+      <div class="empty-icon" style="font-size:32px">🔍</div>
+      <div class="empty-title" style="font-size:18px">NO MATCHES</div>
+    </div>`;
+    return;
+  }
+
+  const sorted = [...fil].sort((a,b) => (b.updated||b.created||0) - (a.updated||a.created||0));
+  let html = '';
+
+  for (const lo of sorted) {
+    const skinned = ALL_SLOTS.filter(s => lo.loadout?.[s.id]);
+    const cnt = skinned.length;
+
+    let strip = '';
+    for (const s of skinned) {
+      const sk = lo.loadout[s.id];
+      strip += `<div class="strip-item">
+        <div class="strip-img"><img src="${escAttr(sk.image_url)}" alt="${escAttr(sk.name)}" loading="lazy" onerror="this.style.display='none'"></div>
+        <div class="strip-wn">${escHtml(s.name)}</div>
+        <div class="strip-sk">${escHtml(sk.name)}</div>
+      </div>`;
+    }
+    if (!strip)
+      strip = `<span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:.5px">// NO SKINS SELECTED</span>`;
+
+    html += `<div class="lo-card" id="card_${lo.id}">
+      <div class="lo-card-accent"></div>
+      <div class="lo-card-head" onclick="openLoadout('${lo.id}')">
+        <div class="lo-name">${escHtml(lo.name)}</div>
+        <div class="lo-badge">${cnt} SKIN${cnt !== 1 ? 'S' : ''}</div>
+        <div class="lo-date">${fmtDate(lo.updated || lo.created)}</div>
+        <div class="lo-actions" onclick="event.stopPropagation()">
+          <a href="cs2_loadout_builder.html?id=${lo.id}" class="lo-btn edit">✏ EDIT</a>
+          <button class="lo-btn del" onclick="confirmDel('${lo.id}')">🗑 DEL</button>
+        </div>
+      </div>
+      <div class="skin-strip">${strip}</div>
+      <div class="del-row" id="del_${lo.id}">
+        <div class="del-msg">DELETE "${escHtml(lo.name).toUpperCase()}"? THIS CANNOT BE UNDONE.</div>
+        <button class="del-no" onclick="cancelDel('${lo.id}')">CANCEL</button>
+        <button class="del-yes" onclick="doDelete('${lo.id}')">DELETE</button>
+      </div>
+    </div>`;
+  }
+  wrap.innerHTML = html;
+}
+
+function openLoadout(id) { location.href = 'cs2_loadout_builder.html?id=' + id; }
+function confirmDel(id) { const el = document.getElementById('del_'+id); if(el) el.classList.add('active'); }
+function cancelDel(id)  { const el = document.getElementById('del_'+id); if(el) el.classList.remove('active'); }
+function doDelete(id) {
+  setLoadouts(getLoadouts().filter(l => l.id !== id));
+  showToast('LOADOUT DELETED');
+  renderList();
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return escHtml(s); }
+
+window.addEventListener('focus', renderList);
+window.addEventListener('pageshow', renderList);
+renderList();
+</script>
+</body>
+</html>
