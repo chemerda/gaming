@@ -9,7 +9,7 @@
 :root{
   --bg:#0a0c10;--surface:#0f1318;--surface2:#161b24;
   --border:#1e2836;--border2:#243040;
-  --accent:#f0a500;--accent2:#e05c00;
+  --accent:#3b9eff;--accent2:#00d4ff;
   --blue:#3b9eff;--green:#2ecc71;--purple:#9b59b6;
   --red:#e74c3c;--cyan:#00d4ff;
   --text:#c8d8e8;--text-dim:#6a8098;--text-bright:#eaf2ff;
@@ -34,7 +34,7 @@ h1 span{color:var(--accent)}
 .toolbar-row{display:flex;gap:8px;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid var(--border);margin-bottom:28px;align-items:center}
 .action-btn{font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 16px;background:transparent;border:1px solid;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .2s;letter-spacing:1px;text-decoration:none}
 .btn-accent{border-color:var(--accent);color:var(--accent)}
-.btn-accent:hover{background:rgba(240,165,0,.1)}
+.btn-accent:hover{background:rgba(59,158,255,.1)}
 .btn-dim{border-color:var(--border2);color:var(--text-dim)}
 .btn-dim:hover{border-color:var(--text-dim);color:var(--text)}
 .search-input{background:var(--surface);border:1px solid var(--border2);color:var(--text-bright);font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 14px;outline:none;transition:border-color .2s;letter-spacing:.5px;flex:1;min-width:180px}
@@ -89,6 +89,8 @@ h1 span{color:var(--accent)}
   .lo-card-head{flex-wrap:wrap}
   .count-label{display:none}
 }
+
+.strip-status{margin-top:5px}.ownership-badge{display:inline-flex;padding:2px 5px;border:1px solid;font:8px 'Share Tech Mono',monospace;letter-spacing:.5px;white-space:nowrap}.ownership-badge.owned{color:#2ecc71;border-color:rgba(46,204,113,.5)}.ownership-badge.wishlist{color:#ff6b86;border-color:rgba(255,107,134,.45)}.ownership-badge.not-owned{color:#8494a8;border-color:#354253}
 </style>
 </head>
 <body>
@@ -137,6 +139,27 @@ function setLoadouts(arr) {
   try { localStorage.setItem('cs2_loadouts', JSON.stringify(arr)); } catch(e) {}
 }
 
+function getOwnershipIndex() {
+  const owned=new Set(),wishlist=new Set();
+  const norm=value=>String(value||'').toLowerCase().replace(/★/g,'').replace(/stattrak™?/g,'').replace(/souvenir/g,'').replace(/\s*\|\s*/g,'|').replace(/\s+/g,' ').trim();
+  const add=(set,weapon,skinName,id)=>[ [weapon,skinName].filter(Boolean).join(' | '),skinName,id ].forEach(v=>{const k=norm(v);if(k)set.add(k);});
+  try {
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);if(!key||!key.startsWith('cs2_')||!key.endsWith('_inventory'))continue;
+      let records={};try{records=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+      Object.entries(records||{}).forEach(([id,entries])=>{if(Array.isArray(entries))entries.forEach(entry=>add(owned,entry.weapon,entry.skinName,id));});
+    }
+    const wish=JSON.parse(localStorage.getItem('cs2_global_wishlist')||'[]');
+    if(Array.isArray(wish))wish.forEach(item=>add(wishlist,item.weapon,item.skinName,item.id));
+  } catch(e){console.warn('Could not read inventory status:',e);}
+  return {owned,wishlist,norm};
+}
+function skinStatusBadge(skin,index) {
+  const keys=[index.norm(skin.name),index.norm((skin.name||'').replace(/^★\s*/,''))];
+  const status=keys.some(k=>k&&index.owned.has(k))?['OWNED','owned']:keys.some(k=>k&&index.wishlist.has(k))?['WISHLIST','wishlist']:['NOT OWNED','not-owned'];
+  return '<div class="strip-status"><span class="ownership-badge '+status[1]+'">'+status[0]+'</span></div>';
+}
+
 function fmtDate(ts) {
   if (!ts) return '';
   return new Date(ts).toLocaleDateString(undefined, {year:'numeric',month:'short',day:'numeric'});
@@ -174,6 +197,7 @@ function renderList() {
 
   const sorted = [...fil].sort((a,b) => (b.updated||b.created||0) - (a.updated||a.created||0));
   let html = '';
+  const ownership = getOwnershipIndex();
 
   for (const lo of sorted) {
     const skinned = ALL_SLOTS.filter(s => lo.loadout?.[s.id]);
@@ -186,6 +210,7 @@ function renderList() {
         <div class="strip-img"><img src="${escAttr(sk.image_url)}" alt="${escAttr(sk.name)}" loading="lazy" onerror="this.style.display='none'"></div>
         <div class="strip-wn">${escHtml(s.name)}</div>
         <div class="strip-sk">${escHtml(sk.name)}</div>
+        ${skinStatusBadge(sk,ownership)}
       </div>`;
     }
     if (!strip)
