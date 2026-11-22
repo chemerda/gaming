@@ -9,7 +9,7 @@
 :root{
   --bg:#0a0c10;--surface:#0f1318;--surface2:#161b24;
   --border:#1e2836;--border2:#243040;
-  --accent:#f0a500;--accent2:#e05c00;
+  --accent:#3b9eff;--accent2:#00d4ff;
   --blue:#3b9eff;--green:#2ecc71;--purple:#9b59b6;
   --red:#e74c3c;--cyan:#00d4ff;
   --text:#c8d8e8;--text-dim:#6a8098;--text-bright:#eaf2ff;
@@ -34,7 +34,7 @@ h1 span{color:var(--accent)}
 .nav-row{display:flex;gap:8px;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid var(--border);margin-bottom:28px;align-items:center}
 .action-btn{font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 16px;background:transparent;border:1px solid;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .2s;letter-spacing:1px;text-decoration:none}
 .btn-accent{border-color:var(--accent);color:var(--accent)}
-.btn-accent:hover{background:rgba(240,165,0,.1)}
+.btn-accent:hover{background:rgba(59,158,255,.1)}
 .btn-blue{border-color:var(--blue);color:var(--blue)}
 .btn-blue:hover{background:rgba(59,158,255,.1)}
 .btn-dim{border-color:var(--border2);color:var(--text-dim)}
@@ -149,6 +149,15 @@ h1 span{color:var(--accent)}
   .weapon-grid{grid-template-columns:repeat(2,1fr)}
   .nav-row .ml-auto{margin-left:0;width:100%}
 }
+
+.slot-status{margin-top:6px;min-height:16px}.ownership-badge{display:inline-flex;padding:3px 7px;border:1px solid;font:9px 'Share Tech Mono',monospace;letter-spacing:.8px;white-space:nowrap}
+.ownership-badge.owned{color:#2ecc71;border-color:rgba(46,204,113,.5);background:rgba(46,204,113,.09)}.ownership-badge.wishlist{color:#ff6b86;border-color:rgba(255,107,134,.45);background:rgba(255,107,134,.08)}.ownership-badge.not-owned{color:#8494a8;border-color:#354253;background:rgba(132,148,168,.07)}
+.skin-picker-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) 180px;gap:9px;margin-bottom:12px}.skin-picker-search,.skin-picker-filter{width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text-bright);font:12px 'Share Tech Mono',monospace;padding:10px 12px;outline:none;min-width:0}.skin-picker-search:focus,.skin-picker-filter:focus{border-color:var(--blue)}
+.skin-picker-count{font:10px 'Share Tech Mono',monospace;color:var(--text-dim);margin:0 0 8px}.skin-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:9px;max-height:min(42vh,430px);overflow:auto;padding:2px 4px 8px 2px}
+.skin-option{appearance:none;text-align:left;min-width:0;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px;cursor:pointer;transition:border-color .15s,background .15s}.skin-option:hover{border-color:var(--blue);background:rgba(59,158,255,.07)}.skin-option.selected{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue);background:rgba(59,158,255,.1)}
+.skin-option-img{width:100%;height:82px;object-fit:contain;background:linear-gradient(135deg,var(--bg),#0d1520);display:block;margin-bottom:7px}.skin-option-name{font:700 12px 'Rajdhani',sans-serif;color:var(--text-bright);line-height:1.2;min-height:29px}.skin-option-meta{font:9px 'Share Tech Mono',monospace;color:var(--text-dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.skin-option-status{margin-top:6px;min-height:16px}.preview-status{margin-top:8px}.preview-card-status{padding:0 6px 7px}.preview-card-status .ownership-badge{font-size:8px}
+@media(max-width:600px){.skin-picker-toolbar{grid-template-columns:1fr}.skin-picker-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:42vh}.skin-option-img{height:74px}}
+
 </style>
 </head>
 <body>
@@ -327,6 +336,7 @@ function buildSections() {
         <div class="slot-info">
           <div class="slot-weapon">${slot.name}</div>
           <div class="slot-skin" id="slotSkin_${slot.id}">— NONE</div>
+          <div class="slot-status" id="slotStatus_${slot.id}"></div>
         </div>
       </div>`;
     }
@@ -341,22 +351,54 @@ function refreshAllSlots() {
       updateSlotUI(slot.id);
 }
 
+let ownershipIndex = null;
+function normalizeSkinKey(value) {
+  return String(value || '').toLowerCase().replace(/★/g,'').replace(/stattrak™?/g,'').replace(/souvenir/g,'').replace(/\s*\|\s*/g,'|').replace(/\s+/g,' ').trim();
+}
+function addSkinMatch(set, weapon, skinName, id) {
+  [ [weapon,skinName].filter(Boolean).join(' | '), skinName, id ].forEach(value => { const key=normalizeSkinKey(value); if(key)set.add(key); });
+}
+function getOwnershipIndex() {
+  if(ownershipIndex)return ownershipIndex;
+  const owned=new Set(),wishlist=new Set();
+  try {
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      if(!key||!key.startsWith('cs2_')||!key.endsWith('_inventory'))continue;
+      let records={};try{records=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+      Object.entries(records||{}).forEach(([id,entries])=>{
+        if(!Array.isArray(entries)||!entries.length)return;
+        entries.forEach(entry=>addSkinMatch(owned,entry.weapon,entry.skinName,id));
+      });
+    }
+    const wish=JSON.parse(localStorage.getItem('cs2_global_wishlist')||'[]');
+    if(Array.isArray(wish))wish.forEach(item=>addSkinMatch(wishlist,item.weapon,item.skinName,item.id));
+  } catch(e){console.warn('Could not read CS2 inventory/wishlist status:',e);}
+  return ownershipIndex={owned,wishlist};
+}
+function getSkinStatus(skin) {
+  const index=getOwnershipIndex();
+  const keys=[normalizeSkinKey(skin.name),normalizeSkinKey((skin.name||'').replace(/^★\s*/,''))];
+  if(keys.some(key=>key&&index.owned.has(key)))return{label:'OWNED',cls:'owned'};
+  if(keys.some(key=>key&&index.wishlist.has(key)))return{label:'WISHLIST',cls:'wishlist'};
+  return{label:'NOT OWNED',cls:'not-owned'};
+}
+function statusBadgeHTML(skin) {
+  const status=getSkinStatus(skin);
+  return '<span class="ownership-badge '+status.cls+'">'+status.label+'</span>';
+}
 function updateSlotUI(slotId) {
-  const el = document.getElementById('slot_' + slotId);
-  const imgArea = document.getElementById('slotImg_' + slotId);
-  const skinEl = document.getElementById('slotSkin_' + slotId);
-  if (!el) return;
-  const skin = loadout[slotId];
-  if (skin) {
+  const el=document.getElementById('slot_'+slotId),imgArea=document.getElementById('slotImg_'+slotId),skinEl=document.getElementById('slotSkin_'+slotId),statusEl=document.getElementById('slotStatus_'+slotId);
+  if(!el)return;
+  const skin=loadout[slotId];
+  if(skin){
     el.classList.add('has-skin');
-    imgArea.innerHTML = `<img src="${escAttr(skin.image_url)}" alt="${escAttr(skin.name)}" onerror="this.parentElement.innerHTML='<span class=slot-placeholder>◈</span>'">`;
-    skinEl.textContent = skin.name;
-    skinEl.className = 'slot-skin selected';
-  } else {
-    el.classList.remove('has-skin');
-    imgArea.innerHTML = '<span class="slot-placeholder">◈</span>';
-    skinEl.textContent = '— NONE';
-    skinEl.className = 'slot-skin';
+    imgArea.innerHTML='<img loading="lazy" src="'+escAttr(skin.image_url)+'" alt="'+escAttr(skin.name)+'" onerror="this.parentElement.innerHTML=\'<span class=slot-placeholder>◈</span>\'">';
+    skinEl.textContent=skin.name;skinEl.className='slot-skin selected';
+    if(statusEl)statusEl.innerHTML=statusBadgeHTML(skin);
+  }else{
+    el.classList.remove('has-skin');imgArea.innerHTML='<span class="slot-placeholder">◈</span>';
+    skinEl.textContent='— NONE';skinEl.className='slot-skin';if(statusEl)statusEl.innerHTML='';
   }
 }
 
@@ -418,93 +460,57 @@ function closeModal() {
 
 // ─── Build dropdown modal ───
 function renderDropdownModal() {
-  const tags = currentSlotTag.split('|');
-  // Collect all skins matching this weapon's tags
-  const matchedSkins = [];
-  for (const tag of tags) {
-    for (const [wn, skins] of Object.entries(skinsByWeapon)) {
-      if (wn.includes(tag)) {
-        for (const s of skins) {
-          if (!matchedSkins.find(x => x.id === s.id)) matchedSkins.push(s);
-        }
-      }
-    }
-  }
-  matchedSkins.sort((a,b) => a.name.localeCompare(b.name));
-
-  const cur = loadout[currentSlotId];
-  const curId = cur?.id || '';
-
-  // Build <select> options
-  let opts = `<option value="">— NO SKIN / USE DEFAULT —</option>`;
-  for (const s of matchedSkins) {
-    const sel = s.id === curId ? ' selected' : '';
-    opts += `<option value="${escAttr(s.id)}"${sel}>${escHtml(s.name)}</option>`;
-  }
-
-  // Initial preview
-  const initSkin = cur ? matchedSkins.find(s => s.id === cur.id) || null : null;
-
-  document.getElementById('modalBody').innerHTML = `
-    <div class="modal-body">
-      <div>
-        <div class="modal-field-label">SELECT SKIN — ${escHtml(currentSlotName)} (${matchedSkins.length} available)</div>
-        <select class="skin-select" id="skinDropdown" onchange="onDropdownChange(this.value)">
-          ${opts}
-        </select>
-      </div>
-      <div class="skin-preview" id="skinPreview">
-        ${buildPreviewHTML(initSkin)}
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="action-btn btn-accent" onclick="confirmDropdownSelection()">▶ APPLY SELECTION</button>
-      <button class="action-btn btn-dim" onclick="clearSlot()">✕ REMOVE SKIN</button>
-      <button class="action-btn btn-dim" style="margin-left:auto" onclick="closeModal()">CANCEL</button>
-    </div>`;
-
-  // store matched for lookup during change
-  window._modalSkins = matchedSkins;
+  const tags=currentSlotTag.split('|'),matchedSkins=[];
+  for(const tag of tags)for(const [weaponName,skins] of Object.entries(skinsByWeapon))if(weaponName.includes(tag))for(const skin of skins)if(!matchedSkins.some(item=>item.id===skin.id))matchedSkins.push(skin);
+  matchedSkins.sort((a,b)=>a.name.localeCompare(b.name));
+  window._modalSkins=matchedSkins;
+  const current=loadout[currentSlotId];window._pendingSkinId=current?current.id:'';
+  const initialSkin=current?matchedSkins.find(item=>item.id===current.id)||current:null;
+  document.getElementById('modalBody').innerHTML=
+    '<div class="modal-body"><div class="modal-field-label">CHOOSE A FINISH — '+escHtml(currentSlotName)+' ('+matchedSkins.length+' AVAILABLE)</div>'+
+    '<div class="skin-picker-toolbar"><input class="skin-picker-search" id="skinPickerSearch" type="search" placeholder="SEARCH FINISHES…" oninput="renderSkinGrid()">'+
+    '<select class="skin-picker-filter" id="skinPickerStatus" onchange="renderSkinGrid()"><option value="all">ALL SKINS</option><option value="owned">OWNED</option><option value="wishlist">WISHLIST</option><option value="not-owned">NOT OWNED</option></select></div>'+
+    '<div class="skin-picker-count" id="skinPickerCount"></div><div class="skin-picker-grid" id="skinPickerGrid"></div>'+
+    '<div class="skin-preview" id="skinPreview">'+buildPreviewHTML(initialSkin)+'</div></div>'+
+    '<div class="modal-actions"><button class="action-btn btn-accent" onclick="confirmDropdownSelection()">▶ APPLY SELECTION</button>'+
+    '<button class="action-btn btn-dim" onclick="clearSlot()">✕ REMOVE SKIN</button><button class="action-btn btn-dim" style="margin-left:auto" onclick="closeModal()">CANCEL</button></div>';
+  renderSkinGrid();
+}
+function renderSkinGrid() {
+  const grid=document.getElementById('skinPickerGrid');if(!grid)return;
+  const query=(document.getElementById('skinPickerSearch')?.value||'').toLowerCase().trim();
+  const filter=document.getElementById('skinPickerStatus')?.value||'all',all=window._modalSkins||[];
+  const filtered=all.filter(skin=>{
+    const status=getSkinStatus(skin),matchesQuery=!query||(skin.name+' '+(skin.collection||'')).toLowerCase().includes(query);
+    return matchesQuery&&(filter==='all'||status.cls===filter);
+  });
+  document.getElementById('skinPickerCount').textContent=filtered.length+' OF '+all.length+' SKINS';
+  grid.innerHTML=filtered.map(skin=>{
+    const selected=skin.id===window._pendingSkinId?' selected':'';
+    return '<button type="button" class="skin-option'+selected+'" onclick="selectSkinFromGrid(\''+escJs(skin.id)+'\')">'+
+      '<img class="skin-option-img" src="'+escAttr(skin.image)+'" alt="'+escAttr(skin.name)+'" loading="lazy" onerror="this.style.visibility=\'hidden\'">'+
+      '<div class="skin-option-name">'+escHtml(skin.name)+'</div><div class="skin-option-meta">'+escHtml(skin.collection||'CS2 FINISH')+'</div>'+
+      '<div class="skin-option-status">'+statusBadgeHTML(skin)+'</div></button>';
+  }).join('')||'<div class="modal-loading">NO SKINS MATCH THESE FILTERS</div>';
+}
+function selectSkinFromGrid(skinId) {
+  const skin=(window._modalSkins||[]).find(item=>item.id===skinId);if(!skin)return;
+  window._pendingSkinId=skinId;document.getElementById('skinPreview').innerHTML=buildPreviewHTML(skin);renderSkinGrid();
 }
 
 function buildPreviewHTML(skin) {
-  if (!skin) return `
-    <div class="preview-img-wrap"><span class="preview-placeholder">◈</span></div>
-    <div class="preview-info"><div class="preview-none">// NO SKIN SELECTED — DEFAULT WILL BE USED</div></div>`;
-  const rc = getRarityClass(skin.rarity);
-  return `
-    <div class="preview-img-wrap">
-      <img src="${escAttr(skin.image)}" alt="${escAttr(skin.name)}" onerror="this.parentElement.innerHTML='<span class=preview-placeholder>◈</span>'">
-    </div>
-    <div class="preview-info">
-      <div class="preview-name">${escHtml(skin.name)}</div>
-      <div class="preview-coll">${escHtml(skin.collection || '—')}</div>
-      ${rc ? `<div class="preview-rarity ${rc}">${escHtml(skin.rarityName||'')}</div>` : ''}
-    </div>`;
-}
-
-function onDropdownChange(skinId) {
-  const skins = window._modalSkins || [];
-  const skin = skinId ? skins.find(s => s.id === skinId) : null;
-  document.getElementById('skinPreview').innerHTML = buildPreviewHTML(skin);
+  if(!skin)return '<div class="preview-img-wrap"><span class="preview-placeholder">◈</span></div><div class="preview-info"><div class="preview-none">// NO SKIN SELECTED — DEFAULT WILL BE USED</div></div>';
+  const rc=getRarityClass(skin.rarity);
+  return '<div class="preview-img-wrap"><img src="'+escAttr(skin.image||skin.image_url)+'" alt="'+escAttr(skin.name)+'" loading="lazy" onerror="this.parentElement.innerHTML=\'<span class=preview-placeholder>◈</span>\'"></div>'+
+    '<div class="preview-info"><div class="preview-name">'+escHtml(skin.name)+'</div><div class="preview-coll">'+escHtml(skin.collection||'—')+'</div>'+
+    (rc?'<div class="preview-rarity '+rc+'">'+escHtml(skin.rarityName||'')+'</div>':'')+'<div class="preview-status">'+statusBadgeHTML(skin)+'</div></div>';
 }
 
 function confirmDropdownSelection() {
-  const sel = document.getElementById('skinDropdown');
-  if (!sel || !currentSlotId) return;
-  const skinId = sel.value;
-  if (!skinId) {
-    clearSlot();
-    return;
-  }
-  const skins = window._modalSkins || [];
-  const skin = skins.find(s => s.id === skinId);
-  if (!skin) return;
-  loadout[currentSlotId] = {id: skin.id, name: skin.name, image_url: skin.image, collection: skin.collection};
-  updateSlotUI(currentSlotId);
-  renderPreview();
-  setStatus('unsaved', 'UNSAVED CHANGES');
-  closeModal();
+  if(!currentSlotId)return;const skinId=window._pendingSkinId;if(!skinId){clearSlot();return;}
+  const skin=(window._modalSkins||[]).find(item=>item.id===skinId);if(!skin)return;
+  loadout[currentSlotId]={id:skin.id,name:skin.name,image_url:skin.image,collection:skin.collection,rarity:skin.rarity,rarityName:skin.rarityName};
+  updateSlotUI(currentSlotId);renderPreview();setStatus('unsaved','UNSAVED CHANGES');closeModal();
 }
 
 function getRarityClass(id) {
@@ -536,29 +542,14 @@ function clearSlotById(slotId) {
 }
 
 function renderPreview() {
-  const grid = document.getElementById('previewGrid');
-  let html = '';
-  let count = 0;
-  for (const cat of CATEGORIES) {
-    for (const slot of cat.slots) {
-      const skin = loadout[slot.id];
-      if (skin) {
-        count++;
-        html += `<div class="preview-card">
-          <img class="preview-card-img" src="${escAttr(skin.image_url)}" alt="${escAttr(skin.name)}" loading="lazy" onerror="this.src=''">
-          <div class="preview-card-weapon">${escHtml(slot.name)}</div>
-          <div class="preview-card-skin">${escHtml(skin.name)}</div>
-        </div>`;
-      } else {
-        html += `<div class="preview-card">
-          <div class="preview-card-img" style="display:flex;align-items:center;justify-content:center;font-size:24px;opacity:.2">◈</div>
-          <div class="preview-card-weapon">${escHtml(slot.name)}</div>
-          <div class="preview-card-none">DEFAULT</div>
-        </div>`;
-      }
-    }
+  const grid=document.getElementById('previewGrid');let html='';
+  for(const cat of CATEGORIES)for(const slot of cat.slots){
+    const skin=loadout[slot.id];
+    if(skin)html+='<div class="preview-card"><img class="preview-card-img" src="'+escAttr(skin.image_url)+'" alt="'+escAttr(skin.name)+'" loading="lazy" onerror="this.src=\'\'">'+
+      '<div class="preview-card-weapon">'+escHtml(slot.name)+'</div><div class="preview-card-skin">'+escHtml(skin.name)+'</div><div class="preview-card-status">'+statusBadgeHTML(skin)+'</div></div>';
+    else html+='<div class="preview-card"><div class="preview-card-img" style="display:flex;align-items:center;justify-content:center;font-size:24px;opacity:.2">◈</div><div class="preview-card-weapon">'+escHtml(slot.name)+'</div><div class="preview-card-none">DEFAULT</div></div>';
   }
-  grid.innerHTML = html || '<span style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--text-dim)">NO SKINS SELECTED</span>';
+  grid.innerHTML=html||'<span style="font-family:Share Tech Mono,monospace;font-size:11px;color:var(--text-dim)">NO SKINS SELECTED</span>';
 }
 
 function saveLoadout() {
@@ -603,7 +594,7 @@ function printLoadout() {
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     body{font-family:'Rajdhani',sans-serif;background:#fff;color:#111;padding:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    h1{font-size:26px;letter-spacing:2px;font-weight:700;margin-bottom:4px;border-bottom:3px solid #f0a500;padding-bottom:8px;text-transform:uppercase}
+    h1{font-size:26px;letter-spacing:2px;font-weight:700;margin-bottom:4px;border-bottom:3px solid #3b9eff;padding-bottom:8px;text-transform:uppercase}
     .meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:#888;margin-bottom:16px;letter-spacing:1px}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
     .card{border:1px solid #ddd;text-align:center;overflow:hidden;page-break-inside:avoid}
@@ -654,6 +645,12 @@ function escJs(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'
 
 document.getElementById('skinModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+window.addEventListener('storage', e => {
+  if(e.key==='cs2_global_wishlist'||(e.key&&e.key.startsWith('cs2_')&&e.key.endsWith('_inventory'))){
+    ownershipIndex=null;refreshAllSlots();renderPreview();
+    if(!document.getElementById('skinModal').hidden)renderSkinGrid();
+  }
+});
 
 init();
 </script>
