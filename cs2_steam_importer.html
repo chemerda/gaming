@@ -87,7 +87,7 @@ textarea.raw:focus{border-color:var(--c)}
         <div class="console">
           <div class="console-label">PASTE INTO BROWSER CONSOLE</div>
           <button class="copy-btn" onclick="copyConsoleCmd()">COPY</button>
-          <span id="console-cmd">fetch('/inventory/'+g_steamID+'/730/2?l=english&count=5000').then(r=>r.json()).then(d=>{var o=document.createElement('textarea');o.id='_cs2inv';o.style='position:fixed;bottom:10px;right:10px;width:400px;height:120px;z-index:99999;background:#1a2030;color:#00d4ff;border:2px solid #00d4ff;font-size:10px;padding:8px';o.value=JSON.stringify(d);o.onclick=function(){this.select();this.setSelectionRange(0,99999)};document.body.appendChild(o);o.focus();o.select();alert('Done! Your inventory JSON is in the blue box. Click it, press Ctrl+A then Ctrl+C to copy, then come back here and paste it below.')}).catch(e=>alert('Error: '+e))</span>
+          <span id="console-cmd">fetch('/inventory/'+g_steamID+'/730/2?l=english&count=5000').then(r=>r.json()).then(d=>{var o=document.createElement('textarea');o.id='_cs2inv';o.style='position:fixed;bottom:10px;right:10px;width:400px;height:120px;z-index:99999;background:#1a2030;color:#00d4ff;border:2px solid #00d4ff;font-size:10px;padding:8px';d._owner_steamid=String(g_steamID||'');o.value=JSON.stringify(d);o.onclick=function(){this.select();this.setSelectionRange(0,99999)};document.body.appendChild(o);o.focus();o.select();alert('Done! Your inventory JSON is in the blue box. Click it, press Ctrl+A then Ctrl+C to copy, then come back here and paste it below.')}).catch(e=>alert('Error: '+e))</span>
         </div>
         A blue text box will appear in the corner of your Steam page containing your inventory data.
       </div>
@@ -136,7 +136,27 @@ textarea.raw:focus{border-color:var(--c)}
   </div>
 </div>
 
+<script type="module">
+import { decodeLink } from "https://esm.sh/@csfloat/cs2-inspect-serializer@1.1.6";
+window.cs2DecodeInspectLink = decodeLink;
+window.cs2InspectLibrariesReady = true;
+</script>
 <script>
+function getInspectLink(desc, asset, ownerSteamId){
+  var acts = (desc && desc.actions) || [];
+  var action = acts.find(function(x){ return x && x.link && String(x.link).indexOf('csgo_econ_action_preview') >= 0; });
+  if(!action) return '';
+  return String(action.link)
+    .replace(/%assetid%/g, encodeURIComponent(asset.assetid || ''))
+    .replace(/%owner_steamid%/g, encodeURIComponent(ownerSteamId || (desc && (desc.owner_steamid || desc.owner)) || ''));
+}
+function decodeInspect(link){
+  if(!link || !window.cs2DecodeInspectLink) return null;
+  try {
+    var result = window.cs2DecodeInspectLink(link);
+    return result && (result.item || result);
+  } catch(e) { return null; }
+}
 function copyConsoleCmd(){
   var cmd = document.getElementById('console-cmd').textContent;
   if(navigator.clipboard){
@@ -169,11 +189,12 @@ function processJSON(){
 
   // Handle Steam's response format
   // Sometimes wrapped: {"response":{"assets":...}} or direct {"assets":...}
+  var ownerSteamId = data._owner_steamid || data.owner_steamid || '';
   if(data.response) data = data.response;
   if(data.assets === undefined && data.rgInventory !== undefined){
     // Old Steam inventory format — convert
     showStatus('Detected old Steam inventory format — processing...','inf');
-    processOldFormat(data); return;
+    processOldFormat(data, ownerSteamId); return;
   }
 
   var assets = data.assets || [];
@@ -187,13 +208,14 @@ function processJSON(){
   showStatus('Processing '+assets.length+' items...','inf');
 
   // Load skin-to-store map
-  fetch('https://raw.githubusercontent.com/csdad67/CS2SkinIndex/main/skin_to_store.json?t='+Date.now())
-    .then(function(r){ return r.json(); })
-    .then(function(skinMap){ buildOutput(assets, descs, skinMap); })
+  Promise.all([
+    fetch('https://raw.githubusercontent.com/csdad67/CS2SkinIndex/main/skin_to_store.json?t='+Date.now()).then(function(r){ if(!r.ok) throw new Error('Skin database HTTP '+r.status); return r.json(); }),
+    new Promise(function(resolve){ var started=Date.now(); (function wait(){ if(window.cs2InspectLibrariesReady) return resolve(true); if(Date.now()-started>12000) return resolve(false); setTimeout(wait,150); })(); })
+  ]).then(function(results){ buildOutput(assets, descs, results[0], results[1], ownerSteamId); })
     .catch(function(e){ showStatus('Could not load skin database: '+e.message,'er'); });
 }
 
-function processOldFormat(data){
+function processOldFormat(data, ownerSteamId){
   // Convert old rgInventory format to assets/descriptions format
   var assets = [], descs = [];
   Object.keys(data.rgInventory||{}).forEach(function(k){
@@ -203,18 +225,19 @@ function processOldFormat(data){
   Object.keys(data.rgDescriptions||{}).forEach(function(k){
     descs.push(data.rgDescriptions[k]);
   });
-  fetch('https://raw.githubusercontent.com/csdad67/CS2SkinIndex/main/skin_to_store.json?t='+Date.now())
-    .then(function(r){ return r.json(); })
-    .then(function(skinMap){ buildOutput(assets, descs, skinMap); })
+  Promise.all([
+    fetch('https://raw.githubusercontent.com/csdad67/CS2SkinIndex/main/skin_to_store.json?t='+Date.now()).then(function(r){ if(!r.ok) throw new Error('Skin database HTTP '+r.status); return r.json(); }),
+    new Promise(function(resolve){ var started=Date.now(); (function wait(){ if(window.cs2InspectLibrariesReady) return resolve(true); if(Date.now()-started>12000) return resolve(false); setTimeout(wait,150); })(); })
+  ]).then(function(results){ buildOutput(assets, descs, results[0], results[1], ownerSteamId); })
     .catch(function(e){ showStatus('Could not load skin database: '+e.message,'er'); });
 }
 
-function buildOutput(assets, descs, skinMap){
+function buildOutput(assets, descs, skinMap, inspectReady, ownerSteamId){
   var dm = {};
   descs.forEach(function(d){ dm[d.classid+'_'+(d.instanceid||'0')] = d; });
 
   var invByStore = {};
-  var matched=0, total=0;
+  var matched=0, total=0, decodedCount=0;
 
   assets.forEach(function(a){
     var d   = dm[a.classid+'_'+(a.instanceid||'0')] || {};
@@ -232,14 +255,23 @@ function buildOutput(assets, descs, skinMap){
     base = base.replace('StatTrak\u2122 ','').replace('StatTrak ','').replace('Souvenir ','').trim();
 
     var id       = sid(base);
-    var storeKey = skinMap[id] || null;
-    if(!storeKey) return;
-
-    matched++;
+    var catalogCase = skinMap[id] || '';
+    var storeKey = catalogCase || 'cs2_unmapped_inventory';
+    if(catalogCase) matched++;
     if(!invByStore[storeKey]) invByStore[storeKey] = {};
     if(!invByStore[storeKey][id]) invByStore[storeKey][id] = [];
+    var inspectLink = getInspectLink(d, a, ownerSteamId);
+    var decoded = inspectReady ? decodeInspect(inspectLink) : null;
+    var floatValue = decoded && typeof decoded.paintwear === 'number' ? decoded.paintwear : '';
+    var paintSeed = decoded && decoded.paintseed !== undefined ? decoded.paintseed : '';
+    var paintIndex = decoded && decoded.paintindex !== undefined ? decoded.paintindex : '';
+    if(floatValue !== '') decodedCount++;
     invByStore[storeKey][id].push({
-      st: st, wear: wear, float: '', pattern: '', assetid: a.assetid||''
+      st: st, wear: wear, float: floatValue, pattern: paintSeed,
+      paintIndex: paintIndex, fade: '', assetid: a.assetid||'',
+      inspectLink: inspectLink, marketHashName: mhn,
+      weapon: base.split(' | ')[0] || '', skinName: base.split(' | ').slice(1).join(' | '),
+      caseName: catalogCase || 'Uncatalogued'
     });
   });
 
@@ -251,10 +283,10 @@ function buildOutput(assets, descs, skinMap){
   }
 
   var result = JSON.stringify({
-    version:   2,
+    version:   3,
     exported:  new Date().toISOString(),
-    source:    'CS2 Skin Index Steam Importer',
-    summary:   {totalSkins: matched, totalEntries: matched, wishlisted: 0, cases: 0},
+    source:    'CS2 Skin Index Steam Importer + CSFloat inspect serializer',
+    summary:   {totalSkins: total, totalEntries: total, catalogMatched: matched, wishlisted: 0, cases: Object.keys(invByStore).length},
     inventory: invByStore,
     wishlist:  []
   }, null, 2);
@@ -265,8 +297,7 @@ function buildOutput(assets, descs, skinMap){
   document.getElementById('out').scrollIntoView({behavior:'smooth', block:'start'});
   setTimeout(function(){ ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); }, 500);
 
-  showStatus('\u2713 Processed: '+total+' weapon skins, '+matched+' matched to cases. '
-    +'Copy the JSON below and paste into Inventory Manager \u2192 MERGE IMPORT.','ok');
+  showStatus('\u2713 Processed: '+total+' weapon skins; '+matched+' matched to the case catalog; '+(total-matched)+' retained as uncatalogued; '+decodedCount+' float/pattern records decoded. Fade percentage remains blank until a verified calculation is available. Copy the JSON below and paste into Inventory Manager → MERGE IMPORT.','ok');
 }
 
 function showStatus(msg, type){

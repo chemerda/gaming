@@ -318,6 +318,7 @@ function doImport(rep){
       else{
         ens.forEach(function(en){
           var dup=ex[id].some(function(x){
+            if(en.assetid && x.assetid) return String(x.assetid)===String(en.assetid);
             return x.float===en.float&&x.wear===en.wear&&x.pattern===en.pattern&&x.st===en.st;
           });
           if(!dup)ex[id].push(en);
@@ -387,8 +388,12 @@ function rPreview(){
         var pts=[e.st?'ST\u2122':'STD'];
         if(e.wear)pts.push(ab(e.wear));
         if(e.float)pts.push('FL '+parseFloat(e.float).toFixed(4));
-        if(e.pattern)pts.push('P'+e.pattern);
-        return'<span class="chip'+(e.st?' cst':'')+'">'+pts.join(' \u00b7 ')+'</span>';
+        if(e.pattern!==''&&e.pattern!==undefined&&e.pattern!==null)pts.push('P'+e.pattern);
+        if(e.fade!==''&&e.fade!==undefined&&e.fade!==null)pts.push('FADE '+e.fade+'%');
+        if(e.paintIndex!==''&&e.paintIndex!==undefined&&e.paintIndex!==null)pts.push('KIT '+e.paintIndex);
+        var chip='<span class="chip'+(e.st?' cst':'')+'">'+pts.join(' \u00b7 ')+'</span>';
+        if(e.inspectLink) chip='<a href="'+String(e.inspectLink).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" title="Open CS2 inspect link" style="text-decoration:none">'+chip+'</a>';
+        return chip;
       }).join(' ');
       h+='<tr><td class="tn">'+nm+'</td><td class="tc">'+cn+'</td><td>'+chips+'</td></tr>';
     });
