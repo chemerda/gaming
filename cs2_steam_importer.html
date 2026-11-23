@@ -273,7 +273,9 @@ function buildOutput(assets, descs, skinMap, inspectReady, ownerSteamId){
 
     var id       = sid(base);
     var catalogCase = skinMap[id] || '';
-    var storeKey = catalogCase || 'cs2_unmapped_inventory';
+    // Inventory Manager only imports keys in the cs2_*_inventory format.
+    // Use a stable key derived from the collection name for catalog matches.
+    var storeKey = catalogCase ? ('cs2_' + sid(catalogCase) + '_inventory') : 'cs2_unmapped_inventory';
     if(catalogCase) matched++;
     if(!invByStore[storeKey]) invByStore[storeKey] = {};
     if(!invByStore[storeKey][id]) invByStore[storeKey][id] = [];
