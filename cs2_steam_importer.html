@@ -255,10 +255,9 @@ function buildOutput(assets, descs, skinMap, inspectReady, ownerSteamId){
     base = base.replace('StatTrak\u2122 ','').replace('StatTrak ','').replace('Souvenir ','').trim();
 
     var id       = sid(base);
-    var storeKey = skinMap[id] || null;
-    if(!storeKey) return;
-
-    matched++;
+    var catalogCase = skinMap[id] || '';
+    var storeKey = catalogCase || 'cs2_unmapped_inventory';
+    if(catalogCase) matched++;
     if(!invByStore[storeKey]) invByStore[storeKey] = {};
     if(!invByStore[storeKey][id]) invByStore[storeKey][id] = [];
     var inspectLink = getInspectLink(d, a, ownerSteamId);
@@ -270,7 +269,9 @@ function buildOutput(assets, descs, skinMap, inspectReady, ownerSteamId){
     invByStore[storeKey][id].push({
       st: st, wear: wear, float: floatValue, pattern: paintSeed,
       paintIndex: paintIndex, fade: '', assetid: a.assetid||'',
-      inspectLink: inspectLink, marketHashName: mhn
+      inspectLink: inspectLink, marketHashName: mhn,
+      weapon: base.split(' | ')[0] || '', skinName: base.split(' | ').slice(1).join(' | '),
+      caseName: catalogCase || 'Uncatalogued'
     });
   });
 
@@ -285,7 +286,7 @@ function buildOutput(assets, descs, skinMap, inspectReady, ownerSteamId){
     version:   3,
     exported:  new Date().toISOString(),
     source:    'CS2 Skin Index Steam Importer + CSFloat inspect serializer',
-    summary:   {totalSkins: matched, totalEntries: matched, wishlisted: 0, cases: 0},
+    summary:   {totalSkins: total, totalEntries: total, catalogMatched: matched, wishlisted: 0, cases: Object.keys(invByStore).length},
     inventory: invByStore,
     wishlist:  []
   }, null, 2);
@@ -296,7 +297,7 @@ function buildOutput(assets, descs, skinMap, inspectReady, ownerSteamId){
   document.getElementById('out').scrollIntoView({behavior:'smooth', block:'start'});
   setTimeout(function(){ ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); }, 500);
 
-  showStatus('\u2713 Processed: '+total+' weapon skins, '+matched+' matched to cases; '+decodedCount+' float/pattern records decoded. Fade percentage is left blank until a verified calculator is integrated. Copy the JSON below and paste into Inventory Manager \u2192 MERGE IMPORT.','ok');
+  showStatus('\u2713 Processed: '+total+' weapon skins; '+matched+' matched to the case catalog; '+(total-matched)+' retained as uncatalogued; '+decodedCount+' float/pattern records decoded. Fade percentage remains blank until a verified calculation is available. Copy the JSON below and paste into Inventory Manager → MERGE IMPORT.','ok');
 }
 
 function showStatus(msg, type){
