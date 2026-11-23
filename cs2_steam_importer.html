@@ -136,7 +136,42 @@ textarea.raw:focus{border-color:var(--c)}
   </div>
 </div>
 
+<script type="module">
+import { decodeLink } from "https://esm.sh/@csfloat/cs2-inspect-serializer@1.1.6";
+import { FadeCalculator, AmberFadeCalculator, AcidFadeCalculator } from "https://esm.sh/csgo-fade-percentage-calculator@2.0.0";
+window.cs2DecodeInspectLink = decodeLink;
+window.cs2FadeCalculators = { FadeCalculator, AmberFadeCalculator, AcidFadeCalculator };
+window.cs2InspectLibrariesReady = true;
+</script>
 <script>
+function getInspectLink(desc, asset){
+  var acts = (desc && desc.actions) || [];
+  var action = acts.find(function(x){ return x && x.link && String(x.link).indexOf('csgo_econ_action_preview') >= 0; });
+  if(!action) return '';
+  return String(action.link)
+    .replace(/%assetid%/g, encodeURIComponent(asset.assetid || ''))
+    .replace(/%owner_steamid%/g, encodeURIComponent((desc && (desc.owner_steamid || desc.owner)) || ''));
+}
+function decodeInspect(link){
+  if(!link || !window.cs2DecodeInspectLink) return null;
+  try {
+    var result = window.cs2DecodeInspectLink(link);
+    return result && (result.item || result);
+  } catch(e) { return null; }
+}
+function calculateFade(baseName, marketName, seed){
+  if(seed === '' || seed === null || seed === undefined || !window.cs2FadeCalculators) return '';
+  var weapon = (baseName || '').split(' | ')[0].replace(/^★\\s*/, '').trim();
+  var finish = (marketName || '').toLowerCase();
+  var calc = finish.indexOf('amber fade') >= 0 ? window.cs2FadeCalculators.AmberFadeCalculator
+    : finish.indexOf('acid fade') >= 0 ? window.cs2FadeCalculators.AcidFadeCalculator
+    : finish.indexOf('fade') >= 0 && finish.indexOf('marble') < 0 ? window.cs2FadeCalculators.FadeCalculator : null;
+  if(!calc || /gloves?/i.test(weapon)) return '';
+  try {
+    var value = calc.getFadePercentage(weapon, Number(seed));
+    return typeof value === 'number' && isFinite(value) ? Number(value.toFixed(2)) : '';
+  } catch(e) { return ''; }
+}
 function copyConsoleCmd(){
   var cmd = document.getElementById('console-cmd').textContent;
   if(navigator.clipboard){
@@ -187,9 +222,10 @@ function processJSON(){
   showStatus('Processing '+assets.length+' items...','inf');
 
   // Load skin-to-store map
-  fetch('https://raw.githubusercontent.com/csdad67/CS2SkinIndex/main/skin_to_store.json?t='+Date.now())
-    .then(function(r){ return r.json(); })
-    .then(function(skinMap){ buildOutput(assets, descs, skinMap); })
+  Promise.all([
+    fetch('https://raw.githubusercontent.com/csdad67/CS2SkinIndex/main/skin_to_store.json?t='+Date.now()).then(function(r){ if(!r.ok) throw new Error('Skin database HTTP '+r.status); return r.json(); }),
+    new Promise(function(resolve){ var started=Date.now(); (function wait(){ if(window.cs2InspectLibrariesReady) return resolve(true); if(Date.now()-started>12000) return resolve(false); setTimeout(wait,150); })(); })
+  ]).then(function(results){ buildOutput(assets, descs, results[0], results[1]); })
     .catch(function(e){ showStatus('Could not load skin database: '+e.message,'er'); });
 }
 
@@ -203,18 +239,19 @@ function processOldFormat(data){
   Object.keys(data.rgDescriptions||{}).forEach(function(k){
     descs.push(data.rgDescriptions[k]);
   });
-  fetch('https://raw.githubusercontent.com/csdad67/CS2SkinIndex/main/skin_to_store.json?t='+Date.now())
-    .then(function(r){ return r.json(); })
-    .then(function(skinMap){ buildOutput(assets, descs, skinMap); })
+  Promise.all([
+    fetch('https://raw.githubusercontent.com/csdad67/CS2SkinIndex/main/skin_to_store.json?t='+Date.now()).then(function(r){ if(!r.ok) throw new Error('Skin database HTTP '+r.status); return r.json(); }),
+    new Promise(function(resolve){ var started=Date.now(); (function wait(){ if(window.cs2InspectLibrariesReady) return resolve(true); if(Date.now()-started>12000) return resolve(false); setTimeout(wait,150); })(); })
+  ]).then(function(results){ buildOutput(assets, descs, results[0], results[1]); })
     .catch(function(e){ showStatus('Could not load skin database: '+e.message,'er'); });
 }
 
-function buildOutput(assets, descs, skinMap){
+function buildOutput(assets, descs, skinMap, inspectReady){
   var dm = {};
   descs.forEach(function(d){ dm[d.classid+'_'+(d.instanceid||'0')] = d; });
 
   var invByStore = {};
-  var matched=0, total=0;
+  var matched=0, total=0, decodedCount=0, fadeCount=0;
 
   assets.forEach(function(a){
     var d   = dm[a.classid+'_'+(a.instanceid||'0')] || {};
@@ -238,8 +275,18 @@ function buildOutput(assets, descs, skinMap){
     matched++;
     if(!invByStore[storeKey]) invByStore[storeKey] = {};
     if(!invByStore[storeKey][id]) invByStore[storeKey][id] = [];
+    var inspectLink = getInspectLink(d, a);
+    var decoded = inspectReady ? decodeInspect(inspectLink) : null;
+    var floatValue = decoded && typeof decoded.paintwear === 'number' ? decoded.paintwear : '';
+    var paintSeed = decoded && decoded.paintseed !== undefined ? decoded.paintseed : '';
+    var paintIndex = decoded && decoded.paintindex !== undefined ? decoded.paintindex : '';
+    var fadePct = calculateFade(base, mhn, paintSeed);
+    if(floatValue !== '') decodedCount++;
+    if(fadePct !== '') fadeCount++;
     invByStore[storeKey][id].push({
-      st: st, wear: wear, float: '', pattern: '', assetid: a.assetid||''
+      st: st, wear: wear, float: floatValue, pattern: paintSeed,
+      paintIndex: paintIndex, fade: fadePct, assetid: a.assetid||'',
+      inspectLink: inspectLink, marketHashName: mhn
     });
   });
 
@@ -251,9 +298,9 @@ function buildOutput(assets, descs, skinMap){
   }
 
   var result = JSON.stringify({
-    version:   2,
+    version:   3,
     exported:  new Date().toISOString(),
-    source:    'CS2 Skin Index Steam Importer',
+    source:    'CS2 Skin Index Steam Importer + CSFloat inspect serializer',
     summary:   {totalSkins: matched, totalEntries: matched, wishlisted: 0, cases: 0},
     inventory: invByStore,
     wishlist:  []
