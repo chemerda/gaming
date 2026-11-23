@@ -194,7 +194,7 @@ function processJSON(){
   if(data.assets === undefined && data.rgInventory !== undefined){
     // Old Steam inventory format — convert
     showStatus('Detected old Steam inventory format — processing...','inf');
-    processOldFormat(data); return;
+    processOldFormat(data, ownerSteamId); return;
   }
 
   var assets = data.assets || [];
@@ -215,7 +215,7 @@ function processJSON(){
     .catch(function(e){ showStatus('Could not load skin database: '+e.message,'er'); });
 }
 
-function processOldFormat(data){
+function processOldFormat(data, ownerSteamId){
   // Convert old rgInventory format to assets/descriptions format
   var assets = [], descs = [];
   Object.keys(data.rgInventory||{}).forEach(function(k){
