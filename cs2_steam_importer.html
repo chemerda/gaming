@@ -188,7 +188,7 @@ function loadSkinMap(){
   }).then(function(skins){
     var map = {};
     (Array.isArray(skins) ? skins : []).forEach(function(s){
-      if(s && s.name && s.collection) map[sid(s.name.replace(/^[★☆]\\s*/,''))] = s.collection;
+      if(s && s.name && s.collection) map[sid(s.name.replace(/^[★☆]\s*/,''))] = s.collection;
     });
     if(!Object.keys(map).length) throw new Error('Skin catalog loaded but contained no usable entries');
     return map;
