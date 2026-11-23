@@ -67,6 +67,14 @@ h1 span{color:var(--accent)}
 /* Weapon grid */
 .weapon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:8px}
 
+/* Team availability labels */
+.slot-team{display:inline-flex;align-items:center;justify-content:center;min-width:23px;padding:1px 5px;margin-left:6px;border:1px solid;font:9px 'Share Tech Mono',monospace;letter-spacing:.5px;vertical-align:2px}
+.slot-team.cs{color:#55b7ff;border-color:rgba(85,183,255,.55);background:rgba(85,183,255,.08)}
+.slot-team.t{color:#ffad66;border-color:rgba(255,173,102,.55);background:rgba(255,173,102,.08)}
+.slot-team.b{color:#c3a6ff;border-color:rgba(195,166,255,.55);background:rgba(195,166,255,.08)}
+.team-legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 18px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);font:10px 'Share Tech Mono',monospace;color:var(--text-dim)}
+.team-legend-item{display:inline-flex;align-items:center;gap:5px}
+
 /* Weapon slot */
 .weapon-slot{background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;position:relative;display:flex;flex-direction:column}
 .weapon-slot:hover{transform:translateY(-2px);border-color:var(--border2);box-shadow:0 8px 24px rgba(0,0,0,.5)}
@@ -198,7 +206,7 @@ h1 span{color:var(--accent)}
   </div>
 
   <!-- Weapon sections -->
-  <div id="weaponSections"></div>
+  <div class="team-legend"><span class="team-legend-item"><b class="slot-team cs">CS</b> COUNTER-TERRORISTS (CT)</span><span class="team-legend-item"><b class="slot-team t">T</b> TERRORISTS</span><span class="team-legend-item"><b class="slot-team b">B</b> BOTH TEAMS</span></div><div id="weaponSections"></div>
 
   <!-- Preview -->
   <div class="preview-section">
@@ -229,54 +237,54 @@ h1 span{color:var(--accent)}
 <script>
 const CATEGORIES = [
   { label:'PISTOLS', badge:'T + CT', slots:[
-    {id:'glock18',   name:'Glock-18',     tag:'Glock-18'},
-    {id:'p2000',     name:'P2000',         tag:'P2000'},
-    {id:'usps',      name:'USP-S',         tag:'USP-S'},
-    {id:'p250',      name:'P250',          tag:'P250'},
-    {id:'five_seven',name:'Five-SeveN',    tag:'Five-SeveN'},
-    {id:'tec9',      name:'Tec-9',         tag:'Tec-9'},
-    {id:'cz75',      name:'CZ75-Auto',     tag:'CZ75-Auto'},
-    {id:'deagle',    name:'Desert Eagle',  tag:'Desert Eagle'},
-    {id:'r8',        name:'R8 Revolver',   tag:'R8 Revolver'},
-    {id:'dual',      name:'Dual Berettas', tag:'Dual Berettas'},
+    {id:'glock18', side:'T',   name:'Glock-18',     tag:'Glock-18'},
+    {id:'p2000', side:'CS',     name:'P2000',         tag:'P2000'},
+    {id:'usps', side:'CS',      name:'USP-S',         tag:'USP-S'},
+    {id:'p250', side:'B',      name:'P250',          tag:'P250'},
+    {id:'five_seven', side:'CS',name:'Five-SeveN',    tag:'Five-SeveN'},
+    {id:'tec9', side:'T',      name:'Tec-9',         tag:'Tec-9'},
+    {id:'cz75', side:'B',      name:'CZ75-Auto',     tag:'CZ75-Auto'},
+    {id:'deagle', side:'B',    name:'Desert Eagle',  tag:'Desert Eagle'},
+    {id:'r8', side:'B',        name:'R8 Revolver',   tag:'R8 Revolver'},
+    {id:'dual', side:'B',      name:'Dual Berettas', tag:'Dual Berettas'},
   ]},
   { label:'SMGs', badge:'MID-TIER', slots:[
-    {id:'mac10',    name:'MAC-10',   tag:'MAC-10'},
-    {id:'mp9',      name:'MP9',      tag:'MP9'},
-    {id:'mp5sd',    name:'MP5-SD',   tag:'MP5-SD'},
-    {id:'mp7',      name:'MP7',      tag:'MP7'},
-    {id:'ump45',    name:'UMP-45',   tag:'UMP-45'},
-    {id:'p90',      name:'P90',      tag:'P90'},
-    {id:'pp_bizon', name:'PP-Bizon', tag:'PP-Bizon'},
+    {id:'mac10', side:'T',    name:'MAC-10',   tag:'MAC-10'},
+    {id:'mp9', side:'CS',      name:'MP9',      tag:'MP9'},
+    {id:'mp5sd', side:'B',    name:'MP5-SD',   tag:'MP5-SD'},
+    {id:'mp7', side:'B',      name:'MP7',      tag:'MP7'},
+    {id:'ump45', side:'B',    name:'UMP-45',   tag:'UMP-45'},
+    {id:'p90', side:'B',      name:'P90',      tag:'P90'},
+    {id:'pp_bizon', side:'T', name:'PP-Bizon', tag:'PP-Bizon'},
   ]},
   { label:'RIFLES', badge:'PRIMARY', slots:[
-    {id:'ak47',  name:'AK-47',    tag:'AK-47'},
-    {id:'m4a4',  name:'M4A4',     tag:'M4A4'},
-    {id:'m4a1s', name:'M4A1-S',   tag:'M4A1-S'},
-    {id:'famas', name:'FAMAS',    tag:'FAMAS'},
-    {id:'galil', name:'Galil AR', tag:'Galil AR'},
-    {id:'sg553', name:'SG 553',   tag:'SG 553'},
-    {id:'aug',   name:'AUG',      tag:'AUG'},
+    {id:'ak47', side:'T',  name:'AK-47',    tag:'AK-47'},
+    {id:'m4a4', side:'CS',  name:'M4A4',     tag:'M4A4'},
+    {id:'m4a1s', side:'CS', name:'M4A1-S',   tag:'M4A1-S'},
+    {id:'famas', side:'CS', name:'FAMAS',    tag:'FAMAS'},
+    {id:'galil', side:'T', name:'Galil AR', tag:'Galil AR'},
+    {id:'sg553', side:'T', name:'SG 553',   tag:'SG 553'},
+    {id:'aug', side:'CS',   name:'AUG',      tag:'AUG'},
   ]},
   { label:'SNIPER RIFLES', badge:'LONG-RANGE', slots:[
-    {id:'awp',    name:'AWP',     tag:'AWP'},
-    {id:'ssg08',  name:'SSG 08',  tag:'SSG 08'},
-    {id:'g3sg1',  name:'G3SG1',   tag:'G3SG1'},
-    {id:'scar20', name:'SCAR-20', tag:'SCAR-20'},
+    {id:'awp', side:'B',    name:'AWP',     tag:'AWP'},
+    {id:'ssg08', side:'B',  name:'SSG 08',  tag:'SSG 08'},
+    {id:'g3sg1', side:'T',  name:'G3SG1',   tag:'G3SG1'},
+    {id:'scar20', side:'CS', name:'SCAR-20', tag:'SCAR-20'},
   ]},
   { label:'HEAVY', badge:'SHOTGUNS + MGs', slots:[
-    {id:'nova',     name:'Nova',      tag:'Nova'},
-    {id:'xm1014',   name:'XM1014',    tag:'XM1014'},
-    {id:'mag7',     name:'MAG-7',     tag:'MAG-7'},
-    {id:'sawedoff', name:'Sawed-Off', tag:'Sawed-Off'},
-    {id:'negev',    name:'Negev',     tag:'Negev'},
-    {id:'m249',     name:'M249',      tag:'M249'},
+    {id:'nova', side:'B',     name:'Nova',      tag:'Nova'},
+    {id:'xm1014', side:'B',   name:'XM1014',    tag:'XM1014'},
+    {id:'mag7', side:'CS',     name:'MAG-7',     tag:'MAG-7'},
+    {id:'sawedoff', side:'T', name:'Sawed-Off', tag:'Sawed-Off'},
+    {id:'negev', side:'B',    name:'Negev',     tag:'Negev'},
+    {id:'m249', side:'B',     name:'M249',      tag:'M249'},
   ]},
   { label:'KNIFE', badge:'MELEE', slots:[
-    {id:'knife', name:'Knife', tag:'Bayonet|Karambit|M9 Bayonet|Flip Knife|Gut Knife|Falchion Knife|Shadow Daggers|Bowie Knife|Butterfly Knife|Huntsman Knife|Stiletto Knife|Ursus Knife|Navaja Knife|Talon Knife|Classic Knife|Paracord Knife|Survival Knife|Skeleton Knife|Nomad Knife|Kukri Knife'},
+    {id:'knife', side:'B', name:'Knife', tag:'Bayonet|Karambit|M9 Bayonet|Flip Knife|Gut Knife|Falchion Knife|Shadow Daggers|Bowie Knife|Butterfly Knife|Huntsman Knife|Stiletto Knife|Ursus Knife|Navaja Knife|Talon Knife|Classic Knife|Paracord Knife|Survival Knife|Skeleton Knife|Nomad Knife|Kukri Knife'},
   ]},
   { label:'GLOVES', badge:'EQUIPMENT', slots:[
-    {id:'gloves', name:'Gloves', tag:'Gloves|Wraps|Hand Wraps'},
+    {id:'gloves', side:'B', name:'Gloves', tag:'Gloves|Wraps|Hand Wraps'},
   ]},
 ];
 
@@ -334,7 +342,7 @@ function buildSections() {
         </div>
         <button class="slot-clear" onclick="event.stopPropagation();clearSlotById('${slot.id}')" title="Remove skin">✕</button>
         <div class="slot-info">
-          <div class="slot-weapon">${slot.name}</div>
+          <div class="slot-weapon">${slot.name}<span class="slot-team ${slot.side.toLowerCase()}">${slot.side}</span></div>
           <div class="slot-skin" id="slotSkin_${slot.id}">— NONE</div>
           <div class="slot-status" id="slotStatus_${slot.id}"></div>
         </div>
@@ -546,7 +554,7 @@ function renderPreview() {
   for(const cat of CATEGORIES)for(const slot of cat.slots){
     const skin=loadout[slot.id];
     if(skin)html+='<div class="preview-card"><img class="preview-card-img" src="'+escAttr(skin.image_url)+'" alt="'+escAttr(skin.name)+'" loading="lazy" onerror="this.src=\'\'">'+
-      '<div class="preview-card-weapon">'+escHtml(slot.name)+'</div><div class="preview-card-skin">'+escHtml(skin.name)+'</div><div class="preview-card-status">'+statusBadgeHTML(skin)+'</div></div>';
+      '<div class="preview-card-weapon">'+escHtml(slot.name)+' <span class="slot-team '+slot.side.toLowerCase()+'">'+slot.side+'</span></div><div class="preview-card-skin">'+escHtml(skin.name)+'</div><div class="preview-card-status">'+statusBadgeHTML(skin)+'</div></div>';
     else html+='<div class="preview-card"><div class="preview-card-img" style="display:flex;align-items:center;justify-content:center;font-size:24px;opacity:.2">◈</div><div class="preview-card-weapon">'+escHtml(slot.name)+'</div><div class="preview-card-none">DEFAULT</div></div>';
   }
   grid.innerHTML=html||'<span style="font-family:Share Tech Mono,monospace;font-size:11px;color:var(--text-dim)">NO SKINS SELECTED</span>';
