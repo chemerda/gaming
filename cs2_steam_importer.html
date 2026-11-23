@@ -179,6 +179,22 @@ function copyConsoleCmd(){
 
 function sid(n){ return n.toLowerCase().replace(/[^a-z0-9]/g,'_'); }
 
+// Build the importer lookup from the skin catalog stored in this same repository.
+// This avoids relying on the retired/missing CS2SkinIndex repository URL.
+function loadSkinMap(){
+  return fetch('cs2_skins.json?t='+Date.now()).then(function(r){
+    if(!r.ok) throw new Error('Local skin catalog HTTP '+r.status);
+    return r.json();
+  }).then(function(skins){
+    var map = {};
+    (Array.isArray(skins) ? skins : []).forEach(function(s){
+      if(s && s.name && s.collection) map[sid(s.name.replace(/^[★☆]\s*/,''))] = s.collection;
+    });
+    if(!Object.keys(map).length) throw new Error('Skin catalog loaded but contained no usable entries');
+    return map;
+  });
+}
+
 function processJSON(){
   var raw = document.getElementById('raw-json').value.trim();
   if(!raw){ showStatus('Paste your inventory JSON first','er'); return; }
@@ -207,12 +223,12 @@ function processJSON(){
 
   showStatus('Processing '+assets.length+' items...','inf');
 
-  // Load skin-to-store map
+  // Load the local skin catalog and wait for the inspect decoder.
   Promise.all([
-    fetch('https://raw.githubusercontent.com/csdad67/CS2SkinIndex/main/skin_to_store.json?t='+Date.now()).then(function(r){ if(!r.ok) throw new Error('Skin database HTTP '+r.status); return r.json(); }),
+    loadSkinMap(),
     new Promise(function(resolve){ var started=Date.now(); (function wait(){ if(window.cs2InspectLibrariesReady) return resolve(true); if(Date.now()-started>12000) return resolve(false); setTimeout(wait,150); })(); })
   ]).then(function(results){ buildOutput(assets, descs, results[0], results[1], ownerSteamId); })
-    .catch(function(e){ showStatus('Could not load skin database: '+e.message,'er'); });
+    .catch(function(e){ showStatus('Could not load skin catalog: '+e.message,'er'); });
 }
 
 function processOldFormat(data, ownerSteamId){
@@ -225,11 +241,12 @@ function processOldFormat(data, ownerSteamId){
   Object.keys(data.rgDescriptions||{}).forEach(function(k){
     descs.push(data.rgDescriptions[k]);
   });
+  // Load the local skin catalog and wait for the inspect decoder.
   Promise.all([
-    fetch('https://raw.githubusercontent.com/csdad67/CS2SkinIndex/main/skin_to_store.json?t='+Date.now()).then(function(r){ if(!r.ok) throw new Error('Skin database HTTP '+r.status); return r.json(); }),
+    loadSkinMap(),
     new Promise(function(resolve){ var started=Date.now(); (function wait(){ if(window.cs2InspectLibrariesReady) return resolve(true); if(Date.now()-started>12000) return resolve(false); setTimeout(wait,150); })(); })
   ]).then(function(results){ buildOutput(assets, descs, results[0], results[1], ownerSteamId); })
-    .catch(function(e){ showStatus('Could not load skin database: '+e.message,'er'); });
+    .catch(function(e){ showStatus('Could not load skin catalog: '+e.message,'er'); });
 }
 
 function buildOutput(assets, descs, skinMap, inspectReady, ownerSteamId){
