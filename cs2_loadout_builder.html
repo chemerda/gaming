@@ -554,7 +554,7 @@ function renderPreview() {
   for(const cat of CATEGORIES)for(const slot of cat.slots){
     const skin=loadout[slot.id];
     if(skin)html+='<div class="preview-card"><img class="preview-card-img" src="'+escAttr(skin.image_url)+'" alt="'+escAttr(skin.name)+'" loading="lazy" onerror="this.src=\'\'">'+
-      '<div class="preview-card-weapon">'+escHtml(slot.name)+'</div><div class="preview-card-skin">'+escHtml(skin.name)+'</div><div class="preview-card-status">'+statusBadgeHTML(skin)+'</div></div>';
+      '<div class="preview-card-weapon">'+escHtml(slot.name)+' <span class="slot-team '+slot.side.toLowerCase()+'">'+slot.side+'</span></div><div class="preview-card-skin">'+escHtml(skin.name)+'</div><div class="preview-card-status">'+statusBadgeHTML(skin)+'</div></div>';
     else html+='<div class="preview-card"><div class="preview-card-img" style="display:flex;align-items:center;justify-content:center;font-size:24px;opacity:.2">◈</div><div class="preview-card-weapon">'+escHtml(slot.name)+'</div><div class="preview-card-none">DEFAULT</div></div>';
   }
   grid.innerHTML=html||'<span style="font-family:Share Tech Mono,monospace;font-size:11px;color:var(--text-dim)">NO SKINS SELECTED</span>';
