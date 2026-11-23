@@ -138,9 +138,7 @@ textarea.raw:focus{border-color:var(--c)}
 
 <script type="module">
 import { decodeLink } from "https://esm.sh/@csfloat/cs2-inspect-serializer@1.1.6";
-import { FadeCalculator, AmberFadeCalculator, AcidFadeCalculator } from "https://esm.sh/csgo-fade-percentage-calculator@2.0.0";
 window.cs2DecodeInspectLink = decodeLink;
-window.cs2FadeCalculators = { FadeCalculator, AmberFadeCalculator, AcidFadeCalculator };
 window.cs2InspectLibrariesReady = true;
 </script>
 <script>
@@ -158,19 +156,6 @@ function decodeInspect(link){
     var result = window.cs2DecodeInspectLink(link);
     return result && (result.item || result);
   } catch(e) { return null; }
-}
-function calculateFade(baseName, marketName, seed){
-  if(seed === '' || seed === null || seed === undefined || !window.cs2FadeCalculators) return '';
-  var weapon = (baseName || '').split(' | ')[0].replace(/^★\\s*/, '').trim();
-  var finish = (marketName || '').toLowerCase();
-  var calc = finish.indexOf('amber fade') >= 0 ? window.cs2FadeCalculators.AmberFadeCalculator
-    : finish.indexOf('acid fade') >= 0 ? window.cs2FadeCalculators.AcidFadeCalculator
-    : finish.indexOf('fade') >= 0 && finish.indexOf('marble') < 0 ? window.cs2FadeCalculators.FadeCalculator : null;
-  if(!calc || /gloves?/i.test(weapon)) return '';
-  try {
-    var value = calc.getFadePercentage(weapon, Number(seed));
-    return typeof value === 'number' && isFinite(value) ? Number(value.toFixed(2)) : '';
-  } catch(e) { return ''; }
 }
 function copyConsoleCmd(){
   var cmd = document.getElementById('console-cmd').textContent;
@@ -251,7 +236,7 @@ function buildOutput(assets, descs, skinMap, inspectReady){
   descs.forEach(function(d){ dm[d.classid+'_'+(d.instanceid||'0')] = d; });
 
   var invByStore = {};
-  var matched=0, total=0, decodedCount=0, fadeCount=0;
+  var matched=0, total=0, decodedCount=0;
 
   assets.forEach(function(a){
     var d   = dm[a.classid+'_'+(a.instanceid||'0')] || {};
@@ -280,12 +265,10 @@ function buildOutput(assets, descs, skinMap, inspectReady){
     var floatValue = decoded && typeof decoded.paintwear === 'number' ? decoded.paintwear : '';
     var paintSeed = decoded && decoded.paintseed !== undefined ? decoded.paintseed : '';
     var paintIndex = decoded && decoded.paintindex !== undefined ? decoded.paintindex : '';
-    var fadePct = calculateFade(base, mhn, paintSeed);
     if(floatValue !== '') decodedCount++;
-    if(fadePct !== '') fadeCount++;
     invByStore[storeKey][id].push({
       st: st, wear: wear, float: floatValue, pattern: paintSeed,
-      paintIndex: paintIndex, fade: fadePct, assetid: a.assetid||'',
+      paintIndex: paintIndex, fade: '', assetid: a.assetid||'',
       inspectLink: inspectLink, marketHashName: mhn
     });
   });
@@ -312,8 +295,7 @@ function buildOutput(assets, descs, skinMap, inspectReady){
   document.getElementById('out').scrollIntoView({behavior:'smooth', block:'start'});
   setTimeout(function(){ ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); }, 500);
 
-  showStatus('\u2713 Processed: '+total+' weapon skins, '+matched+' matched to cases. '
-    +'Copy the JSON below and paste into Inventory Manager \u2192 MERGE IMPORT.','ok');
+  showStatus('\u2713 Processed: '+total+' weapon skins, '+matched+' matched to cases; '+decodedCount+' float/pattern records decoded. Fade percentage is left blank until a verified calculator is integrated. Copy the JSON below and paste into Inventory Manager \u2192 MERGE IMPORT.','ok');
 }
 
 function showStatus(msg, type){
